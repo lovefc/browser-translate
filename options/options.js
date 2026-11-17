@@ -52,6 +52,13 @@ function setStatus(message, tone) {
   els.status.className = `status visible ${tone || ''}`.trim();
 }
 
+function languageLabel(code) {
+  if (typeof window.fanyiLanguageLabel === 'function') {
+    return window.fanyiLanguageLabel(code);
+  }
+  return code || '目标语言';
+}
+
 function populateLanguages() {
   const languages = Array.isArray(window.FANYI_LANGUAGES) && window.FANYI_LANGUAGES.length > 0
     ? window.FANYI_LANGUAGES
@@ -110,6 +117,59 @@ async function saveSettings(next) {
   return response.settings;
 }
 
+// 单项即时保存：只更新设置镜像，不整体重绘控件，避免覆盖用户正在编辑的其他项。
+async function persistPatch(patch) {
+  const response = await chrome.runtime.sendMessage({
+    type: 'SET_SETTINGS',
+    settings: patch
+  });
+
+  if (!response || !response.ok) {
+    throw new Error(response && response.error ? response.error : '设置保存失败');
+  }
+
+  settings = normalizeSettings(response.settings);
+  return settings;
+}
+
+const TOGGLE_MESSAGES = {
+  autoTranslatePage: ['已开启自动翻译网页', '已关闭自动翻译网页'],
+  selectionBubble: ['已开启选中后显示翻译按钮', '已关闭选中后显示翻译按钮'],
+  autoTranslateDynamic: ['已开启自动翻译动态内容', '已关闭自动翻译动态内容']
+};
+
+async function handleToggleChange(key, input) {
+  const value = input.checked;
+  input.disabled = true;
+
+  try {
+    await persistPatch({ [key]: value });
+    const messages = TOGGLE_MESSAGES[key];
+    setStatus(messages ? messages[value ? 0 : 1] : '设置已保存', 'success');
+  } catch (error) {
+    input.checked = Boolean(settings[key]);
+    setStatus(`保存失败：${(error && error.message) || error}`, 'error');
+  } finally {
+    input.disabled = false;
+  }
+}
+
+async function handleLanguageChange() {
+  const previous = settings.targetLang;
+  const next = els.targetLang.value;
+  els.targetLang.disabled = true;
+
+  try {
+    await persistPatch({ targetLang: next });
+    setStatus(`目标语言已保存：${languageLabel(next)}`, 'success');
+  } catch (error) {
+    els.targetLang.value = previous;
+    setStatus(`保存失败：${(error && error.message) || error}`, 'error');
+  } finally {
+    els.targetLang.disabled = false;
+  }
+}
+
 async function handleSave() {
   els.save.disabled = true;
   setStatus('正在保存…', 'info');
@@ -165,6 +225,17 @@ async function handleClearCache() {
 }
 
 function bindEvents() {
+  // 所有选项修改后立即保存生效，与弹窗行为一致；「保存设置」仍可整体确认一次。
+  els.targetLang.addEventListener('change', handleLanguageChange);
+  els.selectionBubble.addEventListener('change', () => {
+    handleToggleChange('selectionBubble', els.selectionBubble);
+  });
+  els.autoTranslatePage.addEventListener('change', () => {
+    handleToggleChange('autoTranslatePage', els.autoTranslatePage);
+  });
+  els.autoTranslateDynamic.addEventListener('change', () => {
+    handleToggleChange('autoTranslateDynamic', els.autoTranslateDynamic);
+  });
   els.save.addEventListener('click', handleSave);
   els.reset.addEventListener('click', handleReset);
   els.clearCache.addEventListener('click', handleClearCache);

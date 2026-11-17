@@ -381,18 +381,22 @@ async function setSettings(patch) {
     throw new TranslateError('INVALID_LANG', '目标语言代码无效');
   }
 
-  const next = normalizeSettings({
-    ...(await getSettings()),
-    ...('targetLang' in patch ? { targetLang: patch.targetLang } : {}),
-    ...('selectionBubble' in patch ? { selectionBubble: Boolean(patch.selectionBubble) } : {}),
-    ...('autoTranslatePage' in patch ? { autoTranslatePage: Boolean(patch.autoTranslatePage) } : {}),
-    ...('autoTranslateDynamic' in patch
-      ? { autoTranslateDynamic: Boolean(patch.autoTranslateDynamic) }
-      : {})
-  });
+  // 只写入补丁里的键：避免"读取-合并-写回"在两次并发保存时
+  // 把对方刚改的值（例如刚关闭的自动翻译开关）覆盖回旧值。
+  const update = {};
+  if ('targetLang' in patch) update.targetLang = patch.targetLang;
+  if ('selectionBubble' in patch) update.selectionBubble = Boolean(patch.selectionBubble);
+  if ('autoTranslatePage' in patch) update.autoTranslatePage = Boolean(patch.autoTranslatePage);
+  if ('autoTranslateDynamic' in patch) {
+    update.autoTranslateDynamic = Boolean(patch.autoTranslateDynamic);
+  }
 
-  await chrome.storage.local.set(next);
-  return next;
+  if (Object.keys(update).length === 0) {
+    return getSettings();
+  }
+
+  await chrome.storage.local.set(update);
+  return getSettings();
 }
 
 /* ------------------------------------------------------------------ */

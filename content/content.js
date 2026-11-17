@@ -1089,6 +1089,10 @@
       if (jobId !== undefined && jobId !== state.jobId) {
         return { canceled: true, done, failed, lastError, total };
       }
+      // 调用方（自动翻译）可在每批开始前要求中止，例如主开关刚被关闭。
+      if (typeof optionsValue.shouldContinue === 'function' && !optionsValue.shouldContinue()) {
+        return { canceled: true, stoppedByGuard: true, done, failed, lastError, total };
+      }
 
       const texts = batch.map((entry) => entry[0]);
 
@@ -1135,9 +1139,13 @@
   }
 
   async function translatePage(isAuto) {
-    // 自动翻译被取消或恢复过原文后，本次浏览不再自动开始；手动翻译不受影响。
-    if (isAuto && state.autoCanceled) {
-      return { ok: false, error: '自动翻译已取消' };
+    // 自动翻译：主开关已关闭或本次浏览已取消/恢复原文时都不执行。
+    // 这里会复查一次，避免页面语言检测期间开关发生变化导致的竞态。
+    if (isAuto && (!state.settings.autoTranslatePage || state.autoCanceled)) {
+      return {
+        ok: false,
+        error: state.autoCanceled ? '自动翻译已取消' : '自动翻译已关闭'
+      };
     }
 
     if (state.translating) {
@@ -1184,6 +1192,10 @@
       const result = await translateGroups(groups, {
         jobId,
         to: targetLang,
+        // 自动翻译进行中若开关被关闭，下一批立即中止。
+        ...(isAuto
+          ? { shouldContinue: () => state.settings.autoTranslatePage && !state.autoCanceled }
+          : {}),
         onProgress: ({ done, failed, total: groupTotal }) => {
           const processed = done + failed;
           const percent = Math.min(100, Math.max(1, Math.round((processed / groupTotal) * 100)));
@@ -1204,6 +1216,11 @@
       });
 
       if (result.canceled || jobId !== state.jobId) {
+        // 主开关在翻译中途被关闭：收掉进度条并提示，而不是让它一直挂着。
+        if (result.stoppedByGuard) {
+          hideProgress();
+          showToast('自动翻译已关闭，本次翻译已停止', 'info', 2600);
+        }
         return { ok: false, canceled: true };
       }
 
@@ -1527,7 +1544,8 @@
   }
 
   function shouldAutoTranslateNewNodes() {
-    if (state.settings.autoTranslateDynamic) return true;
+    // 主开关关闭，或本次浏览已取消/恢复原文时，不再自动翻译任何内容。
+    // autoTranslateDynamic 只决定是否持续监听动态新增内容，不能绕过主开关。
     return state.settings.autoTranslatePage && !state.autoCanceled;
   }
 
@@ -1626,8 +1644,13 @@
   }
 
   function syncObserver() {
-    if (shouldAutoTranslateNewNodes()) startObserver();
-    else stopObserver();
+    // 持续监听动态新增内容属于实验功能（autoTranslateDynamic），
+    // 且必须以主开关开启为前提，避免关闭自动翻译后仍继续翻译。
+    if (state.settings.autoTranslateDynamic && shouldAutoTranslateNewNodes()) {
+      startObserver();
+    } else {
+      stopObserver();
+    }
   }
 
   // 翻译进行中错过的新增节点，在本轮翻译结束后补扫一次。
@@ -1652,7 +1675,9 @@
     try {
       const result = await translateGroups(groups, {
         jobId: state.jobId,
-        to: state.settings.targetLang
+        to: state.settings.targetLang,
+        // 主开关关闭或已取消时立即中止后续批次。
+        shouldContinue: () => shouldAutoTranslateNewNodes()
       });
       if (!result.canceled && result.failed > 0) {
         console.warn('[封尘翻译] 动态内容部分翻译失败：', result.lastError);
