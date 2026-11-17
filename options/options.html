@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>封尘翻译 · 设置</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <div class="logo" aria-hidden="true">译</div>
+      <div class="titles">
+        <h1>封尘翻译</h1>
+        <p>设置</p>
+      </div>
+    </header>
+
+    <section class="card">
+      <div class="field">
+        <label for="targetLang">目标语言</label>
+        <select id="targetLang" aria-label="目标语言"></select>
+      </div>
+
+      <div class="toggle-list">
+        <label class="toggle-row" for="autoTranslatePage">
+          <span class="toggle-copy">
+            <strong>自动翻译网页</strong>
+            <small>打开网页后自动翻译为目标语言，已为目标语言的页面跳过</small>
+          </span>
+          <input id="autoTranslatePage" type="checkbox" role="switch">
+        </label>
+
+        <label class="toggle-row" for="selectionBubble">
+          <span class="toggle-copy">
+            <strong>选中文本后显示翻译按钮</strong>
+            <small>关闭后仍可使用右键菜单翻译选中文本</small>
+          </span>
+          <input id="selectionBubble" type="checkbox" role="switch">
+        </label>
+
+        <label class="toggle-row" for="autoTranslateDynamic">
+          <span class="toggle-copy">
+            <strong>自动翻译动态加载内容</strong>
+            <small>实验性功能，会增加接口请求量</small>
+          </span>
+          <input id="autoTranslateDynamic" type="checkbox" role="switch">
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="save" type="button" class="button primary">保存设置</button>
+        <button id="reset" type="button" class="button secondary">恢复默认</button>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card compact">
+      <div class="card-row">
+        <div>
+          <h2>翻译缓存</h2>
+          <p>缓存只保存在当前浏览器会话的内存中。</p>
+        </div>
+        <button id="clearCache" type="button" class="button secondary">清除缓存</button>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      目标语言对新的翻译生效；已翻译页面需要先恢复原文。
+    </footer>
+  </main>
+
+  <script src="../shared/languages.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

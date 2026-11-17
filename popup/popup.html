@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>封尘翻译</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="logo" aria-hidden="true">译</div>
+      <div class="titles">
+        <h1>封尘翻译</h1>
+        <p>自动整页翻译 · 划词 · 文本翻译</p>
+      </div>
+    </header>
+
+    <section class="field">
+      <label for="targetLang">目标语言</label>
+      <select id="targetLang" aria-label="目标语言"></select>
+    </section>
+
+    <section class="manual-section">
+      <label class="section-label" for="manualInput">文本翻译</label>
+      <textarea id="manualInput" class="manual-input" rows="3" maxlength="5000"
+        placeholder="输入要翻译的文字，Ctrl+Enter 快速翻译"></textarea>
+      <div class="manual-actions">
+        <span id="manualCount" class="char-count">0 / 5000</span>
+        <button id="manualTranslate" type="button" class="button primary small">翻译</button>
+      </div>
+      <div id="manualResultWrap" class="manual-result" hidden>
+        <div class="result-head">
+          <span id="manualResultLabel" class="result-label">译文</span>
+          <button id="manualCopy" type="button" class="link-button">复制</button>
+        </div>
+        <div id="manualResult" class="manual-result-text"></div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button id="translatePage" type="button" class="button primary">翻译当前页</button>
+      <button id="restorePage" type="button" class="button secondary">恢复原文</button>
+    </section>
+
+    <section class="toggle-section">
+      <label class="switch-row" for="autoTranslatePage">
+        <span class="switch-copy">
+          <strong>自动翻译网页</strong>
+          <small>打开网页后自动翻译为目标语言</small>
+        </span>
+        <input id="autoTranslatePage" type="checkbox" role="switch">
+      </label>
+      <label class="switch-row" for="selectionBubble">
+        <span class="switch-copy">
+          <strong>选中后显示翻译按钮</strong>
+          <small>右键菜单始终可用</small>
+        </span>
+        <input id="selectionBubble" type="checkbox" role="switch">
+      </label>
+    </section>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <footer class="footer">
+      <span id="pageState" class="page-state">正在读取页面状态…</span>
+      <button id="openOptions" type="button" class="link-button">设置</button>
+    </footer>
+  </main>
+
+  <script src="../shared/languages.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
